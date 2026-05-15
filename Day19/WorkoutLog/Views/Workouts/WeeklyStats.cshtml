@@ -1,0 +1,108 @@
+﻿@model WorkoutLog.ViewModels.WeeklyStatsViewModel
+
+@{
+    ViewData["Title"] = "Недельная статистика";
+    // Защита от деления на ноль для графика
+    int maxScale = Model.MaxDailyDuration > 0 ? Model.MaxDailyDuration : 1;
+}
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>📊 Статистика за неделю</h1>
+        <a asp-action="Index" class="btn btn-outline-secondary">↩ Назад в журнал</a>
+    </div>
+
+    <!-- Навигация по неделям -->
+    <div class="card mb-4 bg-light">
+        <div class="card-body d-flex justify-content-between align-items-center py-2">
+            <a asp-action="WeeklyStats" asp-route-weekOffset="@(Model.WeekOffset - 1)" class="btn btn-primary btn-sm">
+                ⬅ Прошлая неделя
+            </a>
+            <h5 class="mb-0 text-center">
+                @Model.StartOfWeek.ToString("dd.MM") — @Model.EndOfWeek.ToString("dd.MM.yyyy")
+                @if (Model.WeekOffset == 0)
+                {
+                    <span class="badge bg-success ms-2">Текущая</span>
+                }
+            </h5>
+            <a asp-action="WeeklyStats" asp-route-weekOffset="@(Model.WeekOffset + 1)"
+               class="btn btn-primary btn-sm @(Model.WeekOffset >= 0 ? "disabled" : "")">
+                Следующая неделя ➡
+            </a>
+        </div>
+    </div>
+
+    <!-- Главные показатели (Карточки) -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card text-white bg-primary h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title opacity-75">Всего тренировок</h5>
+                    <h1 class="display-4 fw-bold">@Model.TotalWorkouts</h1>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card text-white bg-success h-100">
+                <div class="card-body text-center">
+                    <h5 class="card-title opacity-75">Общее время</h5>
+                    <h1 class="display-4 fw-bold">@Model.TotalDurationFormatted</h1>
+                    <small>@Model.TotalDuration минут</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Столбчатый график активности по дням (CSS) -->
+        <div class="col-md-7 mb-4">
+            <div class="card h-100">
+                <div class="card-header fw-bold">Активность по дням (минуты)</div>
+                <div class="card-body d-flex align-items-end justify-content-around pt-5" style="height: 250px;">
+                    @foreach (var day in Model.DurationByDay)
+                    {
+                        // Вычисляем высоту столбца в процентах
+                        int heightPercent = (int)((double)day.Value / maxScale * 100);
+                        // Минимальная высота для видимости, если есть хоть 1 минута
+                        if (day.Value > 0 && heightPercent < 8) heightPercent = 8;
+
+                        <div class="d-flex flex-column align-items-center" style="width: 12%;">
+                            <small class="text-muted mb-1">@(day.Value > 0 ? day.Value.ToString() : "")</small>
+                            <div class="bg-primary rounded-top w-100"
+                                 style="height: @(day.Value > 0 ? $"{heightPercent}%" : "4px");
+                                transition: height 0.5s ease;
+                                opacity: @(day.Value > 0 ? "1" : "0.2");">
+                            </div>
+                            <span class="mt-2 fw-bold">@day.Key</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Распределение по типам тренировок -->
+        <div class="col-md-5 mb-4">
+            <div class="card h-100">
+                <div class="card-header fw-bold">По типам тренировок</div>
+                <div class="card-body">
+                    @if (Model.WorkoutsByType.Any())
+                    {
+                        <ul class="list-group list-group-flush">
+                            @foreach (var item in Model.WorkoutsByType)
+                            {
+                                <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+                                    <span>🏋️ @item.Key</span>
+                                    <span class="badge bg-primary rounded-pill fs-6">@item.Value</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted text-center mt-4">Нет данных для отображения</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

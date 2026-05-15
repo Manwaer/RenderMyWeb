@@ -1,0 +1,150 @@
+﻿@model IEnumerable<WorkoutLog.Models.Workout>
+
+@{
+    ViewData["Title"] = "Тренировочный журнал";
+    var currentFilter = ViewBag.CurrentFilter as string ?? string.Empty;
+    var availableTypes = ViewBag.AvailableTypes as IEnumerable<string>
+                         ?? Enumerable.Empty<string>();
+}
+
+<div class="container mt-4">
+    <h1 class="mb-4">🏋️ Тренировочный журнал</h1>
+
+    @* Сообщение об успехе через TempData *@
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            ✅ @TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="row mb-4">
+        @* Фильтр по типу тренировки *@
+        <div class="col-md-6">
+            <form asp-action="Index" method="get" class="d-flex gap-2">
+                <select name="filterType" class="form-select">
+                    <option value="">-- Все типы --</option>
+                    @foreach (var type in availableTypes)
+                    {
+                        <option value="@type" selected="@(type == currentFilter)">
+                            @type
+                        </option>
+                    }
+                </select>
+                <button type="submit" class="btn btn-primary">Фильтр</button>
+                @if (!string.IsNullOrEmpty(currentFilter))
+                {
+                    <a asp-action="Index" class="btn btn-outline-secondary">Сбросить</a>
+                }
+            </form>
+        </div>
+
+        @* Фильтр по дате *@
+        <div class="col-md-6">
+            <div class="d-flex gap-2">
+                <input type="date" id="dateFilter" class="form-control"
+                       max="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                <button onclick="filterByDate()" class="btn btn-outline-primary">
+                    По дате
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Замените существующий блок кнопок на этот -->
+    <div class="mb-4 d-flex gap-2">
+        <a asp-action="Create" class="btn btn-success">
+            ➕ Добавить тренировку
+        </a>
+        <!-- НОВАЯ КНОПКА -->
+        <a asp-action="WeeklyStats" class="btn btn-info text-white">
+            📊 Недельная статистика
+        </a>
+    </div>
+
+    @if (!string.IsNullOrEmpty(currentFilter))
+    {
+        <div class="alert alert-info">
+            Показаны тренировки типа: <strong>@currentFilter</strong>
+            (найдено: @Model.Count())
+        </div>
+    }
+
+    @if (Model.Any())
+    {
+        <table class="table table-striped table-hover">
+            <thead class="table-dark">
+                <tr>
+                    <th>@Html.DisplayNameFor(m => m.Date)</th>
+                    <th>@Html.DisplayNameFor(m => m.Type)</th>
+                    <th>@Html.DisplayNameFor(m => m.Exercise)</th>
+                    <th>@Html.DisplayNameFor(m => m.StartTime)</th>
+                    <th>@Html.DisplayNameFor(m => m.Duration)</th>
+                    <th>Действия</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Date.ToString("dd.MM.yyyy")</td>
+                        <td>
+                            <span class="badge bg-primary">@item.Type</span>
+                        </td>
+                        <td>@(item.Exercise ?? "—")</td>
+                        <td>
+                            @(item.StartTime.HasValue
+                                ? item.StartTime.Value.ToString(@"hh\:mm")
+                                : "—")
+                        </td>
+                        <td>@item.Duration мин</td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Id"
+                               class="btn btn-sm btn-warning">✏️</a>
+                            <a asp-action="Delete" asp-route-id="@item.Id"
+                               class="btn btn-sm btn-danger">🗑️</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot class="table-secondary">
+                <tr>
+                    <td colspan="4"><strong>Итого:</strong></td>
+                    <td>
+                        <strong>@Model.Sum(w => w.Duration) мин</strong>
+                    </td>
+                    <td></td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+    else
+    {
+        <div class="alert alert-warning">
+            Тренировки не найдены.
+            <a asp-action="Create" class="alert-link">Добавьте первую тренировку!</a>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        function filterByDate() {
+            const date = document.getElementById('dateFilter').value;
+            if (date) {
+                window.location.href = '/Workouts/Day/' + date;
+            } else {
+                alert('Выберите дату для фильтрации');
+            }
+        }
+
+        // Автоматически скрыть сообщение через 4 секунды
+        setTimeout(() => {
+            const alert = document.querySelector('.alert-success');
+            if (alert) {
+                alert.classList.remove('show');
+            }
+        }, 4000);
+    </script>
+}
